@@ -16,7 +16,8 @@ st.sidebar.title("Page Navigator")
 page = st.sidebar.radio("Go to", ["Home Page", "Interactive Visualization"])
 
 if page == "Home Page":
-    st.title("DS4420 Final Project")
+    st.title("🚀 DS4420 Final Project")
+    st.write("By: Haley Martin and Araya Kartik")
     st.markdown("---")
         
     st.header("Project Overview")
@@ -98,7 +99,7 @@ elif page == "Interactive Visualization":
         fig.update_xaxes(title_text="Rating", row=1, col=2)
         fig.update_yaxes(title_text="Frequency", row=1, col=1)
         fig.update_yaxes(title_text="Frequency", row=1, col=2)
-        
+
     else:
         fig = go.Figure()
         
@@ -153,3 +154,7 @@ elif page == "Interactive Visualization":
     )
     
     st.plotly_chart(fig, use_container_width=True)
+    st.header("Chart Analysis")
+    st.write("""
+        The left histogram represents the posterior distribution of movie ratings predicted by our Bayesian Regression model, while the right histogram shows the actual observed ratings from the dataset. The posterior histogram is more concentrated around the mean rating, indicating that our model doesn't capture the full varibility of the dataset, due to runtime not being a strong predictor of ratings, so it is predicting at the mean and essentially "guessing". In contrast, the observed ratings histogram displays a wider spread of ratings, reflecting the diverse range of audience opinions and preferences. This comparison highlights the limitations of our model in accurately predicting movie ratings based solely on runtimes.
+        """)
