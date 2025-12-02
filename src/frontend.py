@@ -30,8 +30,8 @@ elif page == "Interactive Visualization":
     st.title("Interactive Visualization")
     st.markdown("---")
 
-    posterior_df = pd.read_csv('posterior_mean_predictions.csv')
-    observed_df = pd.read_csv('observed_ratings.csv')
+    posterior_df = pd.read_csv('src/posterior_mean_predictions.csv')
+    observed_df = pd.read_csv('src/observed_ratings.csv')
 
     
     posterior_col = posterior_df.columns[0]
