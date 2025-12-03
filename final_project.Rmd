@@ -1,0 +1,162 @@
+---
+title: "Final Project"
+author: "Haley Martin"
+date: "2025-11-19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(scales)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+download_imdb_file <- function(url, filename) {
+  cat("Downloading", filename, "...\n")
+  data <- httr::GET(url)
+  writeBin(httr::content(data, "raw"), filename)
+  cat("Downloaded", filename, "\n")
+}
+
+basics_url <- "https://datasets.imdbws.com/title.basics.tsv.gz"
+ratings_url <- "https://datasets.imdbws.com/title.ratings.tsv.gz"
+
+download_imdb_file(basics_url, "title.basics.tsv.gz")
+download_imdb_file(ratings_url, "title.ratings.tsv.gz")
+
+cat("Loading basics file...\n")
+basics <- readr::read_tsv(
+  "title.basics.tsv.gz",
+  na = "\\N",
+  progress = TRUE
+)
+
+cat("Loading ratings file...\n")
+ratings <- readr::read_tsv(
+  "title.ratings.tsv.gz",
+  na = "\\N",
+  progress = TRUE
+)
+```
+
+```{r}
+movies <- basics[basics$titleType == "movie", ]
+
+movies <- movies[, c("tconst", "primaryTitle", "startYear", "runtimeMinutes")]
+
+movies$startYear <- suppressWarnings(as.numeric(movies$startYear))
+movies$runtimeMinutes <- suppressWarnings(as.numeric(movies$runtimeMinutes))
+
+movies <- movies[!is.na(movies$startYear) & !is.na(movies$runtimeMinutes), ]
+
+df <- merge(
+  movies,
+  ratings,
+  by = "tconst",
+  all = FALSE
+)
+```
+
+```{r}
+# drop rows where rating or votes are NA
+df <- df[!is.na(df$averageRating) & !is.na(df$numVotes), ]
+
+# keep rows where runtime > 0
+df <- df[df$runtimeMinutes > 0, ]
+
+# keep rows where year >= 2012
+df <- df[df$startYear >= 2012, ]
+
+# keep rows where votes > 50
+df <- df[df$numVotes > 50, ]
+```
+
+```{r}
+head(df)
+```
+
+```{r}
+# df$runtime_scaled <- scale(df$runtimeMinutes)
+```
+
+```{r}
+set.seed(42)  # same as random_state=42
+
+df_sample <- df[sample(nrow(df), 2000), ]
+
+cat("Length of Dataset:", nrow(df_sample), "\n")
+
+head(df_sample)
+```
+
+```{r}
+set.seed(42)
+
+train_ratio <- 0.8  
+
+train_size <- floor(train_ratio * nrow(df))
+
+train_indices <- sample(seq_len(nrow(df)), size = train_size)
+
+train <- df[train_indices, ]
+test  <- df[-train_indices, ]
+```
+
+```{r}
+hist(train$averageRating, breaks = 30)
+```
+
+```{r}
+prior <- default_prior(averageRating ~ runtimeMinutes,
+                       data = train,
+                       family = gaussian())
+movie_brm <- brm(
+  averageRating ~ runtimeMinutes,
+  data = train,
+  family = gaussian(),
+  chains = 4,
+  iter = 1000,
+  prior=prior
+)
+
+
+hist(test$averageRating,
+     breaks = 20,
+     main = "Histogram of Observed Ratings",
+     xlab = "Rating")
+
+mean_preds <- colMeans(post_preds)
+
+hist(mean_preds,
+     breaks = 20,
+     main = "Posterior Mean Predictions",
+     xlab = "Predicted Rating")
+
+summary(movie_brm)
+```
+
+```{r}
+plot(movie_brm)
+```
+```{r}
+post_preds <- posterior_predict(movie_brm, newdata = test)
+
+pred_mean <- colMeans(post_preds)
+
+rmse <- sqrt(mean((pred_mean - test$averageRating)^2))
+rmse
+```
+```{r}
+bayes_R2(movie_brm)
+```
+```{r}
+write.csv(data.frame(observed_rating = test$averageRating),
+          "observed_ratings.csv",
+          row.names = FALSE)
+
+write.csv(data.frame(posterior_mean_pred = mean_preds,1),
+          "posterior_mean_predictions.csv",
+          row.names = FALSE)
+```
+
+
